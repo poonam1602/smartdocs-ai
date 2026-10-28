@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartDocs AI - Interview Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 800px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        .upload-section { margin-bottom: 20px; padding: 15px; background: #eef; border-radius: 8px; text-align: center; }
+        .chat-box { height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 15px; background: #fafafa; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 8px; max-width: 80%; }
+        .user { background-color: #007bff; color: white; align-self: flex-end; margin-left: auto; }
+        .ai { background-color: #e2e3e5; color: black; align-self: flex-start; }
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        #status { color: green; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>SmartDocs AI Assistant</h2>
+
+    <div class="upload-section">
+        <h3>1. Upload your PDF</h3>
+        <input type="file" id="fileInput" accept=".pdf">
+        <button onclick="uploadFile()">Upload PDF</button>
+        <p id="status"></p>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+        <div class="message ai">Hello! Upload a PDF and then ask me anything about it.</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="questionInput" placeholder="Ask a question about the PDF..." onkeypress="if(event.key==='Enter') askQuestion()">
+        <button onclick="askQuestion()">Send</button>
+    </div>
+</div>
+
+<script>
+    async function uploadFile() {
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+
+        if (fileInput.files.length === 0) {
+            status.style.color = "red";
+            status.innerText = "Please select a PDF first!";
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        status.style.color = "orange";
+        status.innerText = "Uploading and processing... Please wait...";
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const text = await response.text();
+
+            if (response.ok) {
+                status.style.color = "green";
+                status.innerText = "✅ " + text;
+            } else {
+                status.style.color = "red";
+                status.innerText = "❌ Error: " + text;
+            }
+        } catch (error) {
+            status.style.color = "red";
+            status.innerText = "❌ Network error: " + error;
+        }
+    }
+
+    async function askQuestion() {
+        const input = document.getElementById('questionInput');
+        const question = input.value.trim();
+        if (!question) return;
+
+        const chatBox = document.getElementById('chatBox');
+
+        // Add user message
+        chatBox.innerHTML += `<div class="message user">${question}</div>`;
+        input.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(question)
+            });
+
+            const answer = await response.text();
+
+            // Add AI message
+            chatBox.innerHTML += `<div class="message ai">${answer}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+        } catch (error) {
+            chatBox.innerHTML += `<div class="message ai" style="color:red;">Error: Could not get a response.</div>`;
+        }
+    }
+</script>
+
+</body>
+</html>
